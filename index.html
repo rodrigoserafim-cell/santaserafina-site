@@ -203,6 +203,7 @@ main .secao{padding-top:10px}
 .bf-sec{background:#1C1C1A;color:#F3EBD6;margin:22px calc(50% - 50vw) 0;padding:42px 0 46px}
 .bf-sec .bf-in{max-width:1120px;margin:0 auto;padding:0 20px}
 .bf-sec .bf-topo{text-align:center}
+.bf-sec .bf-video2{display:block;width:100%;max-width:720px;aspect-ratio:16/9;object-fit:cover;margin:30px auto 0;border-radius:2px}
 .bf-sec{background:#F1EADF;color:#2A2620;border-top:1px solid #E3D8C6;border-bottom:1px solid #E3D8C6}
 .bf-sec .bf-selo{border-color:#2A2620}
 .bf-sec .bf-cont div{border-color:rgba(42,38,32,.28)}
@@ -402,6 +403,7 @@ function secaoBlack(){
       </div>
     </div>
     <div class="grade"></div>
+    <video class="bf-video2" src="img/bf-medalhas.mp4" poster="img/bf-medalhas.jpg" autoplay muted loop playsinline aria-label="Medalhas da Black Friday sobre mármore"></video>
   </div>`;
   const g = s.querySelector(".grade");
   PRODUTOS.forEach((p,i) => { if (p.bf && !p.x) g.appendChild(card(p,i)); });
