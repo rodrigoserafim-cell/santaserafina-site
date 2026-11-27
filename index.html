@@ -105,6 +105,13 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 .toast{position:fixed;left:50%;bottom:calc(80px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--tinta);color:#FFFDF9;padding:10px 16px;font-size:.82rem;border-radius:999px;z-index:30;opacity:0;transition:opacity .2s;pointer-events:none;white-space:nowrap}
 .toast.on{opacity:1}
 
+.sac-cep{margin-top:16px;padding-top:14px;border-top:1px solid var(--fina)}
+.sac-cep[hidden]{display:none}
+.sac-cep label{display:block;font-size:.9rem;margin-bottom:8px}
+.sac-cep input{width:100%;box-sizing:border-box;font:inherit;font-size:1.1rem;letter-spacing:.08em;padding:12px 14px;border:1px solid var(--fina);background:#FFFDF9;color:var(--tinta);border-radius:2px}
+.sac-cep input:focus{outline:2px solid var(--linha);outline-offset:1px}
+.sac-cep-loc{font-size:.85rem;color:var(--suave);margin-top:6px;min-height:1em}
+
 .chip{flex:none;font:inherit;font-size:.82rem;letter-spacing:.14em;text-transform:uppercase;padding:9px 14px 7px;border:1px solid transparent;background:transparent;color:var(--suave);cursor:pointer}
 .chip[aria-pressed="true"]{border-color:var(--linha);color:var(--tinta)}
 :focus-visible{outline:2px solid var(--azul);outline-offset:3px}
@@ -274,6 +281,7 @@ body.bf-off .bf-only{display:none!important}
 <dialog id="sacola" aria-labelledby="sac-titulo"><div class="sac-in">
   <div class="sac-top"><h3 id="sac-titulo">Sua sacola</h3><button class="fechar" id="sac-fechar">Fechar ×</button></div>
   <div id="sac-lista"></div>
+  <div class="sac-cep" id="sac-cep" hidden><label for="sac-cep-in">Preencha seu CEP para cotação do frete</label><input id="sac-cep-in" type="text" inputmode="numeric" autocomplete="postal-code" placeholder="00000-000" maxlength="9"><div class="sac-cep-loc" id="sac-cep-loc" aria-live="polite"></div></div>
   <a class="btn" id="sac-enviar" target="_blank" rel="noopener">Enviar pedido pelo WhatsApp</a>
   <button class="sac-limpar" id="sac-limpar" type="button">Esvaziar sacola</button>
 </div></dialog>
@@ -484,8 +492,9 @@ function atualizarSacola(){
 function desenharSacola(){
   const box = document.getElementById("sac-lista"); box.innerHTML = "";
   const env = document.getElementById("sac-enviar"), lim = document.getElementById("sac-limpar");
-  if (!sacola.length) { box.innerHTML = '<p class="sac-vazia">Sua sacola está vazia. Toque em “Adicionar” nas peças que quiser.</p>'; env.hidden = true; lim.hidden = true; return; }
-  env.hidden = false; lim.hidden = false;
+  const cepBox = document.getElementById("sac-cep");
+  if (!sacola.length) { box.innerHTML = '<p class="sac-vazia">Sua sacola está vazia. Toque em “Adicionar” nas peças que quiser.</p>'; env.hidden = true; lim.hidden = true; cepBox.hidden = true; return; }
+  env.hidden = false; lim.hidden = false; cepBox.hidden = false;
   let soma = 0, aConfirmar = false, temValor = false;
   sacola.forEach(s => {
     const p = prodPor(s.n); if (!p) return;
@@ -503,11 +512,36 @@ function desenharSacola(){
   t.innerHTML = `<div class="sac-tot"><span>Total</span><span>${totTxt}</span></div>` +
     (aConfirmar ? '<p class="sac-obs">As peças “a consultar” não entram na soma. Confirmamos o valor delas pelo WhatsApp, junto com frete e pagamento.</p>' : '<p class="sac-obs">Frete e forma de pagamento combinamos pelo WhatsApp.</p>');
   box.appendChild(t);
+  totAtual = totTxt; montarEnvio();
+}
+let totAtual = "", cepLoc = "";
+function cepFmt(v){ v = (v || "").replace(/\D/g, "").slice(0, 8); return v.length > 5 ? v.slice(0,5) + "-" + v.slice(5) : v; }
+function montarEnvio(){
+  const env = document.getElementById("sac-enviar"); if (!env) return;
   let msg = "Olá! Montei minha sacola no catálogo da Santa Serafina e gostaria de fazer o pedido:\n\n";
   sacola.forEach(s => { const p = prodPor(s.n); if (p) msg += `• ${s.q}x ${p.n} (${linhaPreco(p, s.q)})\n`; });
-  msg += `\nTotal: ${totTxt}`;
+  msg += `\nTotal: ${totAtual}`;
+  const cep = cepFmt(document.getElementById("sac-cep-in").value);
+  if (cep.length === 9) msg += `\nCEP para cotação do frete: ${cep}${cepLoc ? " (" + cepLoc + ")" : ""}`;
   env.href = zap(msg);
 }
+(function(){
+  const inp = document.getElementById("sac-cep-in"), loc = document.getElementById("sac-cep-loc");
+  let ult = "";
+  function buscar(){
+    const d = inp.value.replace(/\D/g, "");
+    if (d.length !== 8) { cepLoc = ""; loc.textContent = ""; ult = ""; montarEnvio(); return; }
+    if (d === ult) return; ult = d; loc.textContent = "Buscando…";
+    fetch("https://viacep.com.br/ws/" + d + "/json/").then(r => r.json()).then(j => {
+      if (j && !j.erro) { cepLoc = j.localidade + " – " + j.uf; loc.textContent = cepLoc; }
+      else { cepLoc = ""; loc.textContent = "CEP não encontrado. Confira os números."; }
+      montarEnvio();
+    }).catch(() => { cepLoc = ""; loc.textContent = ""; montarEnvio(); });
+  }
+  try { inp.value = cepFmt(localStorage.getItem("cep1") || ""); } catch(e) {}
+  inp.addEventListener("input", () => { inp.value = cepFmt(inp.value); try { localStorage.setItem("cep1", inp.value); } catch(e) {} montarEnvio(); buscar(); });
+  if (inp.value) buscar();
+})();
 function abrirSacola(){ desenharSacola(); document.getElementById("sacola").showModal(); }
 document.getElementById("sacola-fab").onclick = abrirSacola;
 document.getElementById("sac-fechar").onclick = () => document.getElementById("sacola").close();
