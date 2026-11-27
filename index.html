@@ -521,7 +521,7 @@ function cepFmt(v){ v = (v || "").replace(/\D/g, "").slice(0, 8); return v.lengt
 function montarEnvio(){
   const env = document.getElementById("sac-enviar"); if (!env) return;
   let msg = "Olá! Montei minha sacola no catálogo da Santa Serafina e gostaria de fazer o pedido:\n\n";
-  sacola.forEach(s => { const p = prodPor(s.n); if (p) msg += `• ${s.q}x ${p.n} (${linhaPreco(p, s.q)})${LINKP(p)}\n\n`; });
+  sacola.forEach(s => { const p = prodPor(s.n); if (p) msg += `• ${s.q}x ${p.n} (${linhaPreco(p, s.q)})${LINKP(p)}\n`; });
   msg += `\nTotal: ${totAtual}`;
   const cep = cepFmt(document.getElementById("sac-cep-in").value);
   if (cep.length === 9) msg += `\nCEP para cotação do frete: ${cep}${cepLoc ? " (" + cepLoc + ")" : ""}`;
